@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление заявками — Образовательный центр</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <style>
+        :root {
+            --bg-body: #f7f5f2; --bg-card: #ffffff; --bg-dark: #2c2c2c;
+            --text-primary: #2c2c2c; --text-secondary: #7a7a7a;
+            --accent: #a68a64; --accent-hover: #8f7653;
+            --primary: #5c6b73; --primary-hover: #4a575e;
+            --border: #e5e2dc; --success: #6b8f71; --danger: #b05a5a;
+            --warning: #c4956a; --radius: 10px; --radius-lg: 16px;
+            --shadow: 0 2px 16px rgba(0,0,0,0.06);
+        }
+        body { background: var(--bg-body); color: var(--text-primary); font-family: 'Segoe UI', system-ui, sans-serif; }
+        .sidebar {
+            min-height: 100vh; background: var(--bg-dark); width: 260px;
+            position: fixed; top: 0; left: 0; z-index: 1000;
+            padding: 1.5rem 0; display: flex; flex-direction: column;
+        }
+        .sidebar-brand {
+            color: #fff; font-weight: 700; font-size: 1.05rem;
+            padding: 0 1.25rem; margin-bottom: 0.5rem;
+            display: flex; align-items: center; gap: 0.5rem;
+        }
+        .sidebar-brand i { color: var(--accent); font-size: 1.25rem; }
+        .sidebar-user {
+            padding: 1rem 1.25rem; margin: 0.5rem 0.75rem;
+            background: rgba(255,255,255,0.06); border-radius: 10px;
+            color: rgba(255,255,255,0.5); font-size: 0.8rem;
+        }
+        .sidebar-user strong { color: #fff; display: block; font-size: 0.9rem; margin-bottom: 2px; }
+        .admin-tag {
+            display: inline-block; background: rgba(166,138,100,0.2);
+            color: var(--accent); font-size: 0.7rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 4px; margin-top: 4px;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .sidebar-nav { flex: 1; padding: 0.5rem 0; }
+        .sidebar-nav .nav-link {
+            color: rgba(255,255,255,0.55); padding: 10px 1.25rem;
+            font-size: 0.9rem; font-weight: 500; border-radius: 0;
+            transition: all 0.2s; display: flex; align-items: center; gap: 0.6rem;
+            text-decoration: none; border-left: 3px solid transparent;
+        }
+        .sidebar-nav .nav-link:hover { color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.04); }
+        .sidebar-nav .nav-link.active { color: #fff; background: rgba(255,255,255,0.08); border-left-color: var(--accent); }
+        .sidebar-nav .nav-link i { font-size: 1.1rem; width: 20px; text-align: center; }
+        .sidebar-nav .nav-link.logout { color: rgba(176,90,90,0.8); margin-top: auto; }
+        .sidebar-nav .nav-link.logout:hover { color: #fff; background: rgba(176,90,90,0.15); }
+        .main-content { margin-left: 260px; padding: 1.5rem 2rem 3rem; }
+        .page-header { margin-bottom: 1.5rem; }
+        .page-header h4 { font-weight: 800; margin-bottom: 0.25rem; }
+        .page-header .breadcrumb { font-size: 0.85rem; }
+        .breadcrumb-item a { color: var(--accent); text-decoration: none; }
+        .card-custom {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); box-shadow: var(--shadow); overflow: hidden;
+        }
+        .card-custom .card-body { padding: 1.5rem; }
+        .stat-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 1.25rem; text-align: center;
+            transition: all 0.2s;
+        }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+        .stat-card .stat-num { font-size: 1.75rem; font-weight: 800; }
+        .stat-card .stat-label { font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem; }
+        .stat-card .stat-icon { font-size: 1.25rem; opacity: 0.4; margin-bottom: 0.3rem; }
+        .table-custom { margin: 0; }
+        .table-custom thead th {
+            background: var(--bg-body); color: var(--text-secondary);
+            font-weight: 600; font-size: 0.8rem; text-transform: uppercase;
+            letter-spacing: 0.5px; padding: 12px 14px; border-bottom: 1px solid var(--border);
+        }
+        .table-custom tbody td {
+            padding: 12px 14px; vertical-align: middle;
+            border-bottom: 1px solid var(--border); font-size: 0.88rem;
+        }
+        .table-custom tbody tr:last-child td { border-bottom: none; }
+        .table-custom tbody tr:hover { background: rgba(166,138,100,0.03); }
+        .badge-status { padding: 5px 12px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; }
+        .badge-pending { background: rgba(196,149,106,0.15); color: #a07840; }
+        .badge-approved { background: rgba(107,143,113,0.15); color: var(--success); }
+        .badge-rejected { background: rgba(176,90,90,0.15); color: var(--danger); }
+        .btn-action {
+            width: 32px; height: 32px; border-radius: 6px;
+            display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid var(--border); background: var(--bg-card);
+            color: var(--text-secondary); transition: all 0.2s; font-size: 0.85rem;
+            padding: 0; cursor: pointer;
+        }
+        .btn-action.approve:hover { border-color: var(--success); color: var(--success); background: rgba(107,143,113,0.08); }
+        .btn-action.reject:hover { border-color: var(--danger); color: var(--danger); background: rgba(176,90,90,0.08); }
+        .btn-action.view:hover { border-color: var(--accent); color: var(--accent); background: rgba(166,138,100,0.08); }
+        .filter-input {
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px 12px; font-size: 0.875rem; transition: border-color 0.2s;
+        }
+        .filter-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(166,138,100,0.15); outline: none; }
+        .modal-content { border-radius: var(--radius-lg); border: 1px solid var(--border); }
+        .modal-header { border-bottom: 1px solid var(--border); }
+        .modal-footer { border-top: 1px solid var(--border); }
+        .btn-accent-sm {
+            background: var(--accent); color: #fff; border: none;
+            border-radius: 8px; font-weight: 600; padding: 8px 18px; font-size: 0.875rem;
+            transition: all 0.2s;
+        }
+        .btn-accent-sm:hover { background: var(--accent-hover); color: #fff; }
+        .btn-success-custom {
+            background: var(--success); color: #fff; border: none;
+            border-radius: 8px; font-weight: 600; padding: 8px 18px; font-size: 0.875rem;
+        }
+        .btn-success-custom:hover { background: #5a7d60; color: #fff; }
+        .btn-danger-custom {
+            background: var(--danger); color: #fff; border: none;
+            border-radius: 8px; font-weight: 600; padding: 8px 18px; font-size: 0.875rem;
+        }
+        .btn-danger-custom:hover { background: #994e4e; color: #fff; }
+        .btn-ghost {
+            background: transparent; color: var(--text-secondary);
+            border: 1px solid var(--border); border-radius: 8px;
+            font-weight: 600; padding: 8px 18px; font-size: 0.875rem;
+        }
+        .btn-ghost:hover { border-color: var(--text-secondary); color: var(--text-primary); }
+        .toast-custom {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 10px; box-shadow: var(--shadow);
+        }
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .main-content { margin-left: 0; padding: 1rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Боковое меню -->
+    <nav class="sidebar">
+        <div class="sidebar-brand">
+            <i class="bi bi-mortarboard-fill"></i> Образцентр
+        </div>
+        <div class="sidebar-user">
+            <strong id="sidebarUserName">—</strong>
+            <span>Администратор</span>
+            <div class="admin-tag"><i class="bi bi-shield-fill me-1"></i>Admin</div>
+        </div>
+        <div class="sidebar-nav d-flex flex-column">
+            <a href="admin-requests.html" class="nav-link active">
+                <i class="bi bi-list-task"></i> Все заявки
+            </a>
+            <a href="#" class="nav-link">
+                <i class="bi bi-people"></i> Пользователи
+            </a>
+            <a href="#" class="nav-link mt-auto logout" onclick="sessionStorage.clear(); window.location.href='authorization.html'">
+                <i class="bi bi-box-arrow-left"></i> Выйти
+            </a>
+        </div>
+    </nav>
+
+    <!-- Основной контент -->
+    <div class="main-content">
+        <div class="page-header">
+            <h4>Управление заявками</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="index.html">Главная</a></li>
+                    <li class="breadcrumb-item active">Все заявки</li>
+                </ol>
+            </nav>
+        </div>
+
+        <!-- Статистика -->
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon"><i class="bi bi-inbox"></i></div>
+                    <div class="stat-num">5</div>
+                    <div class="stat-label">Всего</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:var(--warning)"><i class="bi bi-hourglass-split"></i></div>
+                    <div class="stat-num" style="color:var(--warning)">2</div>
+                    <div class="stat-label">На рассмотрении</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:var(--success)"><i class="bi bi-check-circle"></i></div>
+                    <div class="stat-num" style="color:var(--success)">2</div>
+                    <div class="stat-label">Одобрено</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:var(--danger)"><i class="bi bi-x-circle"></i></div>
+                    <div class="stat-num" style="color:var(--danger)">1</div>
+                    <div class="stat-label">Отклонено</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Фильтры -->
+        <div class="card-custom mb-4">
+            <div class="card-body py-3">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <input type="text" class="filter-input w-100" id="adminSearch" placeholder="Поиск по курсу или автору...">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="filter-input w-100" id="adminFilter">
+                            <option value="all">Все статусы</option>
+                            <option value="pending">На рассмотрении</option>
+                            <option value="approved">Одобрено</option>
+                            <option value="rejected">Отклонено</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn-ghost w-100" id="resetFilter" style="padding:8px 12px;">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Сброс
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таблица -->
+        <div class="card-custom">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-custom">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Курс</th>
+                                <th>Автор</th>
+                                <th>Дата начала</th>
+                                <th>Оплата</th>
+                                <th>Статус</th>
+                                <th style="text-align:center;">Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminTableBody">
+                            <tr data-status="approved">
+                                <td>1</td>
+                                <td><strong>Веб-разработка с нуля</strong></td>
+                                <td>Иванов И.И.</td>
+                                <td>10.02.2025</td>
+                                <td>Перевод</td>
+                                <td><span class="badge-status badge-approved">Одобрена</span></td>
+                                <td style="text-align:center;">
+                                    <button class="btn-action view" data-bs-toggle="modal" data-bs-target="#viewModal" data-n="1" data-c="Веб-разработка с нуля" data-a="Иванов И.И." data-d="10.02.2025" data-p="Перевод по телефону" data-s="approved" data-cr="20.01.2025"><i class="bi bi-eye"></i></button>
+                                </td>
+                            </tr>
+                            <tr data-status="pending">
+                                <td>2</td>
+                                <td><strong>Графический дизайн</strong></td>
+                                <td>Иванов И.И.</td>
+                                <td>01.03.2025</td>
+                                <td>Наличные</td>
+                                <td><span class="badge-status badge-pending">На рассмотрении</span></td>
+                                <td style="text-align:center;">
+                                    <button class="btn-action view me-1" data-bs-toggle="modal" data-bs-target="#viewModal" data-n="2" data-c="Графический дизайн" data-a="Иванов И.И." data-d="01.03.2025" data-p="Наличными" data-s="pending" data-cr="18.01.2025"><i class="bi bi-eye"></i></button>
+                                    <button class="btn-action approve me-1" data-bs-toggle="modal" data-bs-target="#approveModal" data-n="2"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn-action reject" data-bs-toggle="modal" data-bs-target="#rejectModal" data-n="2"><i class="bi bi-x-lg"></i></button>
+                                </td>
+                            </tr>
+                            <tr data-status="rejected">
+                                <td>3</td>
+                                <td><strong>Основы Python</strong></td>
+                                <td>Иванов И.И.</td>
+                                <td>15.03.2025</td>
+                                <td>Перевод</td>
+                                <td><span class="badge-status badge-rejected">Отклонена</span></td>
+                                <td style="text-align:center;">
+                                    <button class="btn-action view" data-bs-toggle="modal" data-bs-target="#viewModal" data-n="3" data-c="Основы Python" data-a="Иванов И.И." data-d="15.03.2025" data-p="Перевод по телефону" data-s="rejected" data-cr="15.01.2025"><i class="bi bi-eye"></i></button>
+                                </td>
+                            </tr>
+                            <tr data-status="pending">
+                                <td>4</td>
+                                <td><strong>UX/UI дизайн</strong></td>
+                                <td>Петров П.П.</td>
+                                <td>20.02.2025</td>
+                                <td>Перевод</td>
+                                <td><span class="badge-status badge-pending">На рассмотрении</span></td>
+                                <td style="text-align:center;">
+                                    <button class="btn-action view me-1" data-bs-toggle="modal" data-bs-target="#viewModal" data-n="4" data-c="UX/UI дизайн" data-a="Петров П.П." data-d="20.02.2025" data-p="Перевод по телефону" data-s="pending" data-cr="22.01.2025"><i class="bi bi-eye"></i></button>
+                                    <button class="btn-action approve me-1" data-bs-toggle="modal" data-bs-target="#approveModal" data-n="4"><i class="bi bi-check-lg"></i></button>
+                                    <button class="btn-action reject" data-bs-toggle="modal" data-bs-target="#rejectModal" data-n="4"><i class="bi bi-x-lg"></i></button>
+                                </td>
+                            </tr>
+                            <tr data-status="approved">
+                                <td>5</td>
+                                <td><strong>Аналитика данных</strong></td>
+                                <td>Сидоров С.С.</td>
+                                <td>05.03.2025</td>
+                                <td>Наличные</td>
+                                <td><span class="badge-status badge-approved">Одобрена</span></td>
+                                <td style="text-align:center;">
+                                    <button class="btn-action view" data-bs-toggle="modal" data-bs-target="#viewModal" data-n="5" data-c="Аналитика данных" data-a="Сидоров С.С." data-d="05.03.2025" data-p="Наличными" data-s="approved" data-cr="10.01.2025"><i class="bi bi-eye"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно просмотра -->
+    <div class="modal fade" id="viewModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h6 class="modal-title" style="font-weight:700;"><i class="bi bi-file-text me-2" style="color:var(--accent)"></i>Заявка №<span id="vmNum"></span></h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-borderless mb-0" style="font-size:0.9rem;">
+                        <tr><td style="color:var(--text-secondary);width:40%;font-weight:600;">Курс</td><td id="vmCourse" class="fw-bold"></td></tr>
+                        <tr><td style="color:var(--text-secondary);font-weight:600;">Автор</td><td id="vmAuthor"></td></tr>
+                        <tr><td style="color:var(--text-secondary);font-weight:600;">Дата начала</td><td id="vmDate"></td></tr>
+                        <tr><td style="color:var(--text-secondary);font-weight:600;">Оплата</td><td id="vmPay"></td></tr>
+                        <tr><td style="color:var(--text-secondary);font-weight:600;">Дата подачи</td><td id="vmCreated"></td></tr>
+                        <tr><td style="color:var(--text-secondary);font-weight:600;">Статус</td><td id="vmStatus"></td></tr>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-ghost" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно одобрения -->
+    <div class="modal fade" id="approveModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div style="width:56px;height:56px;border-radius:50%;background:rgba(107,143,113,0.12);color:var(--success);display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1rem;">
+                        <i class="bi bi-check-lg"></i>
+                    </div>
+                    <h6 style="font-weight:700;">Одобрить заявку №<span id="amNum"></span>?</h6>
+                    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1.25rem;">Заявка будет отмечена как одобренная</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn-ghost" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn-success-custom" id="confirmApprove">Одобрить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно отклонения -->
+    <div class="modal fade" id="rejectModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-body text-center py-4">
+                    <div style="width:56px;height:56px;border-radius:50%;background:rgba(176,90,90,0.12);color:var(--danger);display:inline-flex;align-items:center;justify-content:center;font-size:1.5rem;margin-bottom:1rem;">
+                        <i class="bi bi-x-lg"></i>
+                    </div>
+                    <h6 style="font-weight:700;">Отклонить заявку №<span id="rmNum"></span>?</h6>
+                    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:1.25rem;">Заявка будет отмечена как отклонённая</p>
+                    <div class="d-flex gap-2 justify-content-center">
+                        <button type="button" class="btn-ghost" data-bs-dismiss="modal">Отмена</button>
+                        <button type="button" class="btn-danger-custom" id="confirmReject">Отклонить</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Тост -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index:1100">
+        <div id="actionToast" class="toast toast-custom" role="alert">
+            <div class="toast-header" id="toastHeader" style="border-bottom:1px solid var(--border);border-radius:10px 10px 0 0;">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                <strong class="me-auto" id="toastTitle">Успешно</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body" id="toastBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const user = JSON.parse(sessionStorage.getItem('currentUser'));
+        if (!user || user.role !== 'admin') { window.location.href = 'authorization.html'; }
+        document.getElementById('sidebarUserName').textContent = user ? user.name : '—';
+
+        const statusLabels = {
+            'approved': '<span class="badge-status badge-approved">Одобрена</span>',
+            'pending': '<span class="badge-status badge-pending">На рассмотрении</span>',
+            'rejected': '<span class="badge-status badge-rejected">Отклонена</span>'
+        };
+
+        // Просмотр
+        document.getElementById('viewModal').addEventListener('show.bs.modal', function(e) {
+            const b = e.relatedTarget;
+            document.getElementById('vmNum').textContent = b.dataset.n;
+            document.getElementById('vmCourse').textContent = b.dataset.c;
+            document.getElementById('vmAuthor').textContent = b.dataset.a;
+            document.getElementById('vmDate').textContent = b.dataset.d;
+            document.getElementById('vmPay').textContent = b.dataset.p;
+            document.getElementById('vmCreated').textContent = b.dataset.cr;
+            document.getElementById('vmStatus').innerHTML = statusLabels[b.dataset.s];
+        });
+
+        // Одобрение
+        document.getElementById('approveModal').addEventListener('show.bs.modal', function(e) {
+            document.getElementById('amNum').textContent = e.relatedTarget.dataset.n;
+        });
+        document.getElementById('confirmApprove').addEventListener('click', function() {
+            bootstrap.Modal.getInstance(document.getElementById('approveModal')).hide();
+            showToast('Одобрено', 'Заявка успешно одобрена', true);
+        });
+
+        // Отклонение
+        document.getElementById('rejectModal').addEventListener('show.bs.modal', function(e) {
+            document.getElementById('rmNum').textContent = e.relatedTarget.dataset.n;
+        });
+        document.getElementById('confirmReject').addEventListener('click', function() {
+            bootstrap.Modal.getInstance(document.getElementById('rejectModal')).hide();
+            showToast('Отклонено', 'Заявка отклонена', false);
+        });
+
+        function showToast(title, body, success) {
+            const h = document.getElementById('toastHeader');
+            h.style.background = success ? 'rgba(107,143,113,0.1)' : 'rgba(176,90,90,0.1)';
+            h.style.color = success ? 'var(--success)' : 'var(--danger)';
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastBody').textContent = body;
+            new bootstrap.Toast(document.getElementById('actionToast')).show();
+        }
+
+        // Фильтры
+        document.getElementById('adminSearch').addEventListener('input', filterTable);
+        document.getElementById('adminFilter').addEventListener('change', filterTable);
+        document.getElementById('resetFilter').addEventListener('click', function() {
+            document.getElementById('adminSearch').value = '';
+            document.getElementById('adminFilter').value = 'all';
+            filterTable();
+        });
+
+        function filterTable() {
+            const search = document.getElementById('adminSearch').value.toLowerCase();
+            const status = document.getElementById('adminFilter').value;
+            document.querySelectorAll('#adminTableBody tr').forEach(row => {
+                const text = row.textContent.toLowerCase();
+                const matchSearch = text.includes(search);
+                const matchStatus = status === 'all' || row.dataset.status === status;
+                row.style.display = matchSearch && matchStatus ? '' : 'none';
+            });
+        }
+    </script>
+</body>
+</html>
